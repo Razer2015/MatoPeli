@@ -48,5 +48,28 @@ namespace MatoPeli.Luokat
                 _kasva = false;
             }
         }
+
+        public void Syo(Omena omppu, int x, int y) {
+            _kasva = true; // matoa ei "lyhennetä" uudelleen piirtämisessä
+            omppu.PositioOmena(x, y);
+        }
+
+        public bool OsuuItseensa() {
+            bool paluu = false;
+
+            for (int i = 0; i < this.Palat.Count; i++) {
+                for (int j = 0; j < this.Palat.Count; j++) {
+                    if (!this.Palat[i].Equals(this.Palat[j]) && (this.Palat[i].Osuu(this.Palat[j]))) {
+                        return (true);
+                    }
+                    // TAI
+                    //if((this.Palat[i].X == this.Palat[j].X) && (this.Palat[i].Y == this.Palat[j].Y)) {
+                    //    return (true);
+                    //}
+                }
+            }
+
+            return (paluu);
+        }
     }
 }

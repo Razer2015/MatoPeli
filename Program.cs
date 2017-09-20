@@ -1,5 +1,6 @@
 ﻿using static System.Console;
 using MatoPeli.Luokat;
+using System;
 
 namespace MatoPeli
 {
@@ -7,7 +8,12 @@ namespace MatoPeli
     {
         static void Main(string[] args)
         {
-            Sovellus.AjaSovellus();
+            try {
+                Sovellus.AjaSovellus();
+            }
+            catch (Exception e){
+                WriteLine(e);
+            }
             ReadLine();
         }
     }

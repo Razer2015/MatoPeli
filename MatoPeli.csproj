@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="Luettelot\Luettelot.cs" />
     <Compile Include="Luokat\Mato.cs" />
+    <Compile Include="Luokat\Omena.cs" />
     <Compile Include="Luokat\Pala.cs" />
     <Compile Include="Luokat\Sovellus.cs" />
     <Compile Include="Program.cs" />

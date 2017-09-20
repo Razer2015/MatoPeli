@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MatoPeli.Luettelot;
+using System;
 using System.Configuration;
 using System.IO;
 using System.Text;
@@ -14,6 +15,14 @@ namespace MatoPeli.Luokat
         static int PELINLEVEYS;
         static int PELINKORKEUS;
         static int LIIKKUMISNOPEUS;
+        static ConsoleColor PohjaVari;
+        static ConsoleColor MatoVari;
+
+        static Mato Mato;
+        static Omena Omena;
+        static int Pisteet;
+        static bool Exit;
+
         public static void AjaSovellus() {
             AlustaMuuttujat();
             //Jos ei käytetä ConfigurationManager-luokkaa, voidaan config-tiedosto
@@ -23,11 +32,164 @@ namespace MatoPeli.Luokat
             AlustaConsole();
             SoitaTunnari();
 
+            Pelaa();
+
             //WriteLine(VASENYLAX);
             //WriteLine(VASENYLAY);
             //WriteLine(PELINLEVEYS);
             //WriteLine(PELINKORKEUS);
             //WriteLine(LIIKKUMISNOPEUS); 
+        }
+
+        static void Pelaa() {
+            int kuluneetMillisekunnit = 0;
+
+            do {
+                Thread.Sleep(LIIKKUMISNOPEUS);
+                kuluneetMillisekunnit += LIIKKUMISNOPEUS;
+                PuhdistaMato();
+                Mato.Liiku();
+                YritaSyodaOmena();
+                LopetaJosOsuu();
+                KasitteleSyote();
+                TulostaAika(kuluneetMillisekunnit);
+                TulostaPisteet();
+                PiirraMato();
+                PiirraOmena();
+            } while (!Exit);
+        }
+
+        private static void TulostaPisteet() {
+            string teksti = string.Format("Pisteet {0:0000}", Pisteet);
+
+            int vasen = CursorLeft, yla = CursorTop;
+
+            SetCursorPosition(VASENYLAX + 20, VASENYLAY + PELINKORKEUS + 1);
+            ForegroundColor = ConsoleColor.DarkYellow;
+            BackgroundColor = ConsoleColor.Black;
+            Write(teksti);
+
+            ResetColor();
+            SetCursorPosition(vasen, yla);
+        }
+
+        private static void TulostaAika(int aika) {
+            double sekunteja = (double)aika / 1000;
+            string teksti = string.Format("{0:00} sek", sekunteja);
+
+            // Otetaan talteen kohdistimen sijainti
+            int vasen = CursorLeft, yla = CursorTop;
+
+            SetCursorPosition(VASENYLAX, VASENYLAY + PELINKORKEUS + 1);
+            ForegroundColor = ConsoleColor.Magenta;
+            BackgroundColor = ConsoleColor.Black;
+            Write(teksti);
+
+            ResetColor();
+            SetCursorPosition(vasen, yla);
+        }
+
+        private static void YritaSyodaOmena() {
+            if (Mato.Paa.Osuu(Omena)) {
+                Beep(5000, 300);
+                if(Omena.Vari == ConsoleColor.Yellow) {
+                    Pisteet += 50;
+                }
+                else if (Omena.Vari == ConsoleColor.Red) {
+                    Pisteet += 100;
+                }
+                else if (Omena.Vari == ConsoleColor.Green) {
+                    Pisteet += 150;
+                }
+                Mato.Syo(Omena, PELINLEVEYS, PELINKORKEUS);
+                LIIKKUMISNOPEUS = (int)(LIIKKUMISNOPEUS * 0.75);
+            }
+        }
+
+        static void PiirraOmena() {
+            char c1 = HaeMerkki(15);
+
+            ForegroundColor = Omena.Vari;
+            BackgroundColor = PohjaVari;
+            SetCursorPosition(VASENYLAX + 1 + Omena.X, VASENYLAY + 1 + Omena.Y);
+            Write(c1);
+            ResetColor();
+        }
+
+        private static void LopetaJosOsuu() {
+            if (Mato.OsuuItseensa()) {
+                Beep();
+                Exit = true;
+            }
+
+            // Osuuko reunoihin
+            if (Mato.Paa.X == -1 || Mato.Paa.X == (PELINLEVEYS - 1) ||
+                Mato.Paa.Y == -1 || Mato.Paa.Y == (PELINKORKEUS - 1)) {
+                Beep();
+                Exit = true;
+            }
+        }
+
+        static void KasitteleSyote() {
+            Thread.Sleep(50);
+            if (KeyAvailable) {
+                ConsoleKeyInfo keyInfo = ReadKey(true);
+                switch (keyInfo.Key) {
+                    case ConsoleKey.UpArrow:
+                        Mato.Suunta = Suunta.YLOS;
+                        break;
+                    case ConsoleKey.DownArrow:
+                        Mato.Suunta = Suunta.ALAS;
+                        break;
+                    case ConsoleKey.LeftArrow:
+                        Mato.Suunta = Suunta.VASEN;
+                        break;
+                    case ConsoleKey.RightArrow:
+                        Mato.Suunta = Suunta.OIKEA;
+                        break;
+                }
+            }
+        }
+
+        static void PuhdistaMato() {
+            BackgroundColor = PohjaVari;
+            foreach (var p in Mato.Palat) {
+                SetCursorPosition(VASENYLAX + 1 + p.X, VASENYLAY + 1 + p.Y);
+                Write(' ');
+            }
+        }
+
+        static void PiirraMato() {
+            ForegroundColor = MatoVari;
+            BackgroundColor = PohjaVari;
+            char c1 = HaeMerkki(177),
+                c2 = HaeMerkki(16),
+                c3 = HaeMerkki(17),
+                c4 = HaeMerkki(30),
+                c5 = HaeMerkki(31);
+
+            foreach (var p in Mato.Palat) {
+                SetCursorPosition(VASENYLAX + 1 + p.X, VASENYLAY + 1 + p.Y);
+                if (p.Equals(Mato.Paa)) {
+                    switch (Mato.Suunta) {
+                        case Suunta.ALAS:
+                            Write(c2);
+                            break;
+                        case Suunta.YLOS:
+                            Write(c4);
+                            break;
+                        case Suunta.VASEN:
+                            Write(c3);
+                            break;
+                        case Suunta.OIKEA:
+                            Write(c5);
+                            break;
+                    }
+                }
+                else {
+                    Write(c1);
+                }
+            }
         }
 
         static void PiirraKehys(int x, int y) {
@@ -51,7 +213,7 @@ namespace MatoPeli.Luokat
                 SetCursorPosition(x, y + i);
                 Write(c4);
                 for (int j = 0; j < PELINLEVEYS; j++) {
-                    BackgroundColor = ConsoleColor.Gray;
+                    BackgroundColor = PohjaVari;
                     Write(" ");
                 }
                 ResetColor();
@@ -69,12 +231,27 @@ namespace MatoPeli.Luokat
         static void AlustaMuuttujat() {
             var appsettings = ConfigurationManager.AppSettings;
 
-            VASENYLAX = int.Parse(appsettings["VASENYLAX"]);
-            VASENYLAY = int.Parse(appsettings["VASENYLAY"]);
-            PELINLEVEYS = int.Parse(appsettings["PELINLEVEYS"]);
-            PELINKORKEUS = int.Parse(appsettings["PELINKORKEUS"]);
-            LIIKKUMISNOPEUS = int.Parse(appsettings["LIIKKUMISNOPEUS"]);
+            try {
+                VASENYLAX = int.Parse(appsettings["VASENYLAX"]);
+                VASENYLAY = int.Parse(appsettings["VASENYLAY"]);
+                PELINLEVEYS = int.Parse(appsettings["PELINLEVEYS"]);
+                PELINKORKEUS = int.Parse(appsettings["PELINKORKEUS"]);
+                LIIKKUMISNOPEUS = int.Parse(appsettings["LIIKKUMISNOPEUS"]);
+                PohjaVari = ConsoleColor.Gray;
+                MatoVari = ConsoleColor.DarkGreen;
+
+                Mato = new Mato(PELINLEVEYS / 2, PELINKORKEUS / 2, Suunta.ALAS);
+                Omena = new Omena();
+                Omena.PositioOmena(PELINLEVEYS, PELINKORKEUS);
+                Pisteet = 0;
+                Exit = false;
+            }
+            catch (Exception) {
+                throw new ApplicationException("Konfiguroinnin lukemisessa virhe. ");
+            }
         }
+
+
 
         static void AlustaConsole() {
             WindowWidth = PELINLEVEYS + VASENYLAX + 4;
@@ -133,7 +310,8 @@ namespace MatoPeli.Luokat
                         }
                     }
                 }
-            } catch (Exception ex) {
+            }
+            catch (Exception ex) {
                 WriteLine($"Tiedoston {tiedosto} lukeminen ei onnistu {ex.Message}");
             }
             //StreamReader sr = null;
